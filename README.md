@@ -16,6 +16,82 @@ pip install neuredge-sdk
 - 🔍 Vector storage with consistency and retry controls
 - 🔒 Built-in error handling and retries
 
+## Available Models
+
+### Chat Models
+
+#### Llama Models
+- **Llama 2 Series**
+  - `@cf/meta/llama-2-7b-chat-fp16` - 7B parameter model
+  - `@cf/meta/llama-2-7b-chat-int8` - 7B parameter quantized model
+
+- **Llama 3 Series**
+  - `@cf/meta/llama-3-8b-instruct` - Base 8B model
+  - `@cf/meta/llama-3-8b-instruct-awq` - 8B AWQ quantized
+  - `@cf/meta/llama-3.1-8b-instruct` - Latest 8B with JSON support
+  - `@cf/meta/llama-3.1-8b-instruct-awq` - Latest 8B AWQ quantized
+  - `@cf/meta/llama-3.1-8b-instruct-fp8` - 8B FP8 quantized
+  - `@cf/meta/llama-3.1-8b-instruct-fast` - Optimized for speed
+  - `@cf/meta/llama-3.1-70b-instruct` - Large 70B model
+  - `@cf/meta/llama-3.2-1b-instruct` - Compact 1B model
+  - `@cf/meta/llama-3.2-3b-instruct` - Efficient 3B model
+
+- **Vision Models**
+  - `@cf/meta/llama-3.2-11b-vision` - 11B multimodal model
+  - `@cf/meta/llama-3.2-90b-vision` - 90B multimodal model
+
+#### Mistral Models
+- `@cf/mistral/mistral-7b-instruct-v0.1` - Original 7B model
+- `@hf/mistral/mistral-7b-instruct-v0.2` - Improved 7B model
+- `@cf/mistral/mistral-7b-instruct-v0.2-lora` - LoRA-enabled version
+
+#### Qwen Models
+- `@cf/qwen/qwen1.5-0.5b-chat` - Compact 0.5B model
+- `@cf/qwen/qwen1.5-1.8b-chat` - Small 1.8B model
+- `@cf/qwen/qwen1.5-7b-chat-awq` - 7B AWQ quantized
+- `@cf/qwen/qwen1.5-14b-chat-awq` - 14B AWQ quantized
+
+#### Google Models
+- `@cf/google/gemma-2b-it-lora` - 2B LoRA-enabled
+- `@cf/google/gemma-7b-it-lora` - 7B LoRA-enabled
+- `@hf/google/gemma-7b-it` - Standard 7B model
+
+#### Specialized Models
+- `@cf/microsoft/phi-2` - General purpose
+- `@cf/openchat/openchat-3.5-0106` - ChatGPT-like
+- `@cf/deepseek-ai/deepseek-math-7b-instruct` - Math specialized
+- `@cf/deepseek-ai/deepseek-r1-distill-qwen-32b` - Distilled 32B
+- `@cf/tinyllama/tinyllama-1.1b-chat-v1.0` - Ultra-compact
+
+### Embedding Models
+
+#### BGE Models
+- `@cf/baai/bge-base-en-v1.5`
+  - Dimensions: 768
+  - Best for: General purpose
+  - Max tokens: 8191
+
+- `@cf/baai/bge-large-en-v1.5`
+  - Dimensions: 1024
+  - Best for: High accuracy
+  - Max tokens: 8191
+
+- `@cf/baai/bge-small-en-v1.5`
+  - Dimensions: 384
+  - Best for: Efficiency
+  - Max tokens: 8191
+
+#### Model Features
+
+| Model Type | Context Window | Features |
+|------------|---------------|-----------|
+| Llama 3.1 70B | 8192 | JSON mode, Function calling, Streaming |
+| Llama 3.1 8B | 8192 | Multilingual, Streaming |
+| Llama 3.2 Vision | 128000 | Image understanding, Multilingual |
+| Mistral 7B | 8192 | Streaming, LoRA fine-tuning |
+| Qwen 14B | 8192 | Multilingual, Streaming |
+| BGE Embeddings | 8191 | Semantic search, Cross-lingual |
+
 ## Quick Start
 
 ```python
