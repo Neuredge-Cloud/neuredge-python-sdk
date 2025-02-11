@@ -60,5 +60,4 @@ class Neuredge:
         """Context manager exit"""
         self.close()
 
-__version__ = "1.0.0b2"  # Match pyproject.toml version
 __all__ = ["Neuredge", "NeuredgeError"]
