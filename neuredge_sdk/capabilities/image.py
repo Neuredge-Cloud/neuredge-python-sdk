@@ -1,92 +1,58 @@
 from typing import Optional, Dict, Any, List, Union
 from ..types import ImageGenerationOptions
 from .base import BaseCapability
+import base64
 
 class ImageCapabilities(BaseCapability):
+    """Image generation capabilities"""
+
     @property
-    def base_path(self) -> str:
-        return '/image'  # Image endpoints use /image prefix
+    def base_path(self) -> str:  # Changed from basePath to base_path to match abstract method
+        return '/image'
 
-    def generate(
-        self,
-        prompt: str,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, List[str]]:
-        """
-        Generate an image from a text prompt
-        
-        Args:
-            prompt: Text description of the desired image
-            options: Image generation options including mode, dimensions, etc.
-            
-        Returns:
-            The generated image as bytes
-        """
-        options = options or {}
-        request_data = {
-            'prompt': prompt,
-            'model': options.get('model', "@cf/stabilityai/stable-diffusion-xl-base-1.0"),
-            'width': options.get('width', 1024),
-            'height': options.get('height', 1024),
-            'style': options.get('style')
-        }
-
-        response = self._client.post(
-            self.endpoint('/generate'),
-            request_data,
-            binary_response=True  # Indicate we expect binary data
-        )
-
-        # Convert binary response to base64 string
+    def _convert_to_bytes(self, response: Any) -> bytes:
+        """Convert API response to bytes"""
+        # Handle direct binary response
         if isinstance(response, bytes):
-            import base64
-            image_b64 = base64.b64encode(response).decode('utf-8')
-            return {'images': [f"data:image/jpeg;base64,{image_b64}"]}
+            return response
+            
+        # Handle response with images array
+        if isinstance(response, dict) and 'images' in response:
+            image_str = response['images'][0]
+            if image_str.startswith('data:image/'):
+                base64_data = image_str.split(',')[1]
+            else:
+                base64_data = image_str
+            return base64.b64decode(base64_data)
         
-        # Handle JSON response format
+        # Log the actual response format for debugging
         if isinstance(response, dict):
-            return {'images': response.get('images', [])}
-        
-        # Handle direct string response
-        if isinstance(response, str):
-            return {'images': [response]}
+            print("Response keys:", response.keys())
+        print("Response type:", type(response))
+        raise ValueError("Unexpected response format")
 
-        raise ValueError(f"Unexpected response type: {type(response)}")
+    def generate(self, prompt: str, options: Optional[Dict] = None) -> bytes:
+        """Generate image and return as bytes (like JS Blob)"""
+        response = self._client.post(
+            f"{self.base_path}/generate", 
+            {
+                "prompt": prompt,
+                **(options or {})
+            },
+            binary_response=True  # Add flag for binary response
+        )
+        return self._convert_to_bytes(response)
 
-    def generate_fast(
-        self,
-        prompt: str,
-        options: Optional[Dict[str, Any]] = None
-    ) -> bytes:
-        """
-        Generate an image quickly with potentially lower quality
-        
-        Args:
-            prompt: Text description of the desired image
-            options: Image generation options (excluding mode)
-            
-        Returns:
-            The generated image as bytes
-        """
-        options = options or {}
-        options['mode'] = 'fast'
-        return self.generate(prompt, options)
+    def generate_fast(self, prompt: str, options: Optional[Dict] = None) -> bytes:
+        """Quick generation, returns bytes"""
+        return self.generate(prompt, {
+            **(options or {}),
+            "mode": "fast"
+        })
 
-    def generate_standard(
-        self,
-        prompt: str,
-        options: Optional[Dict[str, Any]] = None
-    ) -> bytes:
-        """
-        Generate a high-quality image with standard processing time
-        
-        Args:
-            prompt: Text description of the desired image
-            options: Image generation options (excluding mode)
-            
-        Returns:
-            The generated image as bytes
-        """
-        options = options or {}
-        options['mode'] = 'standard'
-        return self.generate(prompt, options)
+    def generate_standard(self, prompt: str, options: Optional[Dict] = None) -> bytes:
+        """Standard generation, returns bytes"""
+        return self.generate(prompt, {
+            **(options or {}),
+            "mode": "standard"
+        })

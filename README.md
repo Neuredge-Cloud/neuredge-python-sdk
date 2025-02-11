@@ -1,31 +1,32 @@
 # Neuredge Python SDK
 
-The official Python client for the Neuredge AI Platform. Provides both direct platform capabilities and OpenAI-compatible interfaces.
+The official Python client for the Neuredge AI Platform.
 
 ## Installation
 
 ```bash
-pip install neuredge-sdk  # For production use
-pip install -e ".[test]"  # For development with test dependencies
+pip install neuredge-sdk
 ```
 
 ## Features
 
-- ✨ OpenAI-compatible interfaces for chat completions and embeddings
+- 🤖 OpenAI-compatible chat completions and embeddings
 - 📝 Text summarization, sentiment analysis, and translation
-- 🖼️ Image generation with style and size options
-- 🔍 Vector storage and search with consistency controls
-- ⚡ Synchronous API calls for ease of use
-- 🔒 Automatic retries and standardized error handling
+- 🎨 Image generation with fast and standard modes
+- 🔍 Vector storage with consistency and retry controls
+- 🔒 Built-in error handling and retries
 
 ## Quick Start
-
-### Initialize the Client
 
 ```python
 from neuredge_sdk import Neuredge
 
-client = Neuredge(api_key="your_api_key")
+client = Neuredge(
+    api_key="your_api_key",
+    base_url="https://api.neuredge.dev",  # Optional
+    max_retries=3,                        # Optional
+    retry_delay=1.0                       # Optional
+)
 ```
 
 ### Text Processing
@@ -36,18 +37,22 @@ from neuredge_sdk import Neuredge
 client = Neuredge(api_key="your_api_key")
 
 # Summarization
-summary = client.text.summarize("Long text to summarize...")
+text = """Workers AI allows you to run machine learning models on the Cloudflare network.
+With the launch of Workers AI, Cloudflare is rolling out GPUs globally."""
+summary = client.text.summarize(text)
 print(summary)
 
-# Sentiment Analysis
+# Sentiment Analysis with actual response format
 sentiment = client.text.analyze_sentiment("I love this product!")
-print(sentiment['sentiment'])
+print(f"Sentiment: {sentiment['sentiment']}")  # POSITIVE or NEGATIVE
+print(f"Confidence: {sentiment['confidence']}")
+print(f"Is Confident: {sentiment['is_confident']}")
 
 # Translation
 spanish = client.text.translate(
     text="Hello, world!",
-    source_lang="en",
-    target_lang="es"
+    target_lang="es",
+    source_lang="en"  # Optional
 )
 print(spanish)
 ```
@@ -59,22 +64,23 @@ from neuredge_sdk import Neuredge
 
 client = Neuredge(api_key="your_api_key")
 
-# Basic completion
+# Basic completion with actual model names
 completion = client.openai.chat.create(
+    model="@cf/meta/llama-2-7b-chat-fp16",
     messages=[
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello!"}
-    ],
-    model="gpt-3.5-turbo"  # Maps to our models automatically
+    ]
 )
 print(completion['choices'][0]['message']['content'])
 
-# Streaming completion
-for chunk in client.openai.chat.create(
+# Streaming with actual response format
+stream = client.openai.chat.create(
+    model="@cf/meta/llama-3.1-70b-instruct",
     messages=[{"role": "user", "content": "Count to 3"}],
-    model="gpt-3.5-turbo",
     stream=True
-):
+)
+for chunk in stream:
     if chunk['choices'][0]['delta'].get('content'):
         print(chunk['choices'][0]['delta']['content'], end='')
 ```
@@ -86,11 +92,13 @@ from neuredge_sdk import Neuredge
 
 client = Neuredge(api_key="your_api_key")
 
+# Using correct model name and dimensions
 embedding = client.openai.embeddings.create(
     input="Hello world",
-    model="text-embedding-ada-002"  # Maps to our models
+    model="@cf/baai/bge-small-en-v1.5"  # 384 dimensions
 )
-print(embedding['data'][0]['embedding'][:5])  # First 5 dimensions
+vector = embedding['data'][0]['embedding']  # 384-dimensional vector
+print(vector[:5])  # First 5 dimensions
 ```
 
 ### Vector Store Operations
@@ -100,49 +108,106 @@ from neuredge_sdk import Neuredge
 
 client = Neuredge(api_key="your_api_key")
 
-# Create index
+# Create index with correct dimensions
 client.vector.create_index({
     "name": "my-vectors",
-    "dimension": 768,
+    "dimension": 384,  # BGE small dimension
     "metric": "cosine"
 })
 
-# Store vectors with consistency
-client.vector.add_vectors(
+# Store vectors with proper consistency options
+result = client.vector.add_vectors(
     "my-vectors",
-    vectors=[{"id": "1", "values": embedding['data'][0]['embedding']}],
-    options={"consistency": {"enabled": True}}
+    vectors=[{
+        "id": "1",
+        "values": [0.1] * 384  # Match BGE small dimensions
+    }],
+    options={
+        "consistency": {
+            "enabled": True,
+            "maxRetries": 3,
+            "retryDelay": 1000
+        }
+    }
 )
 
-# Search similar vectors
-results = client.vector.search_vector(
+# Search with actual response format
+matches = client.vector.search_vector(
     "my-vectors",
-    vector=embedding['data'][0]['embedding'],
-    options={"top_k": 10}
+    vector=[0.1] * 384,
+    options={
+        "topK": 10,
+        "consistency": {"enabled": True}
+    }
 )
-print(results[0])
+for match in matches:
+    print(f"ID: {match['id']}, Score: {match['score']}")
 ```
 
 ### Image Generation
 
 ```python
 from neuredge_sdk import Neuredge
+from pathlib import Path
 
 client = Neuredge(api_key="your_api_key")
 
-# Generate image
-response = client.image.generate(
-    prompt="A cute robot learning to code",
-    options={
-        "width": 512,
-        "height": 512,
-        "style": "realistic"
-    }
-)
+# Fast mode - Quick generation
+fast_image = client.image.generate_fast(
+    "A simple sketch of a cat"
+)  # Returns bytes
 
-# Base64 encoded images
-for image in response['images']:
-    print(f"Generated image: {image[:50]}...")
+# Standard mode with options
+standard_image = client.image.generate(
+    "A magical forest with glowing mushrooms",
+    options={
+        "mode": "standard",
+        "width": 1024,
+        "height": 768,
+        "guidance": 8.5,
+        "negativePrompt": "dark, scary, spooky"
+    }
+)  # Returns bytes
+
+# Save the generated images
+images_dir = Path("generated_images")
+images_dir.mkdir(exist_ok=True)
+
+# Direct file writing (bytes response)
+with open(images_dir / "fast.png", 'wb') as f:
+    f.write(fast_image)
+
+with open(images_dir / "standard.png", 'wb') as f:
+    f.write(standard_image)
+```
+
+### Return Types
+
+```python
+# All image generation methods return bytes
+image: bytes = client.image.generate_fast("prompt")  # Direct bytes response
+image: bytes = client.image.generate("prompt", options)  # Direct bytes response
+
+# Image generation options
+options = {
+    "mode": "standard",    # 'fast' or 'standard'
+    "width": 1024,        # 512-1024px
+    "height": 1024,       # 512-1024px
+    "guidance": 7.5,      # 1-20, controls prompt adherence
+    "negativePrompt": ""  # Things to avoid in generation
+}
+```
+
+### Response Format
+
+```python
+# Image generation response format
+{
+    'images': [
+        'data:image/jpeg;base64,<base64-encoded-image-data>',
+        # More images if batch generation
+    ]
+}
 ```
 
 ## Error Handling
@@ -205,4 +270,3 @@ Contributions are welcome! Please see our [Contribution Guidelines](CONTRIBUTING
 ## License
 
 MIT
-````
